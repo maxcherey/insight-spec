@@ -1,0 +1,397 @@
+// Database Schema for Git Connectors (Bitbucket, GitHub, GitLab, CustomGit)
+// All connectors use the same tables with data_source field to distinguish sources
+// data_source values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl"
+
+Project connector {
+  database_type: 'ClickHouse'
+  Note: 'Unified schema for multi-platform Git data collection'
+}
+
+// ============================================================================
+// REPOSITORIES
+// ============================================================================
+
+Table git_repositories {
+  id Int64 [pk]
+  project_key String [note: 'Organization/workspace name. GitHub: "GlobalTypeSystem", Bitbucket: "AA" or "abc". Required for both.']
+  repo_slug String [note: 'Repository name. Example: "gts-go", "abl-core", "k8s-platform-chart". Required for both.']
+  repo_uuid String [note: 'Unique identifier. GitHub: "1067370324" (repo.id as string), Bitbucket: "368" or null. Nullable.']
+  name String [note: 'Repository display name. Example: "gts-go", "abl-core". Required for both.']
+  full_name String [note: 'Full repository path. GitHub: "GlobalTypeSystem/gts-go" (always populated), Bitbucket: null (not populated). Optional - GitHub only.']
+  description String [note: 'Repository description. GitHub: "Go-lang implementation of GTS library", Bitbucket: "" or null. Optional.']
+  is_private Int64 [note: 'Privacy flag. 1=private, 0=public. GitHub: 0 or 1, Bitbucket: null or 1. Nullable.']
+  created_on DateTime64(3) [note: 'Repository creation date. Format: "2025-09-30 19:02:49.000". GitHub: populated, Bitbucket: null (not available in API). Optional - GitHub only.']
+  updated_on DateTime64(3) [note: 'Last repository update. Format: "2026-02-10 20:24:50.000". GitHub: populated, Bitbucket: null (not available in API). Optional - GitHub only.']
+  size Int64 [note: 'Repository size in KB. GitHub: 193, Bitbucket: null (not available in API). Optional - GitHub only.']
+  language String [note: 'Primary programming language. GitHub: "Go", "Python", Bitbucket: null (not available in API). Optional - GitHub only.']
+  has_issues Int64 [note: '1 if issues enabled, 0 if disabled. GitHub: 0 or 1, Bitbucket: null (not available in API). Optional - GitHub only.']
+  has_wiki Int64 [note: '1 if wiki enabled, 0 if disabled. GitHub: 0 or 1, Bitbucket: null (not available in API). Optional - GitHub only.']
+  fork_policy String [note: 'Fork policy. Bitbucket: null (available in metadata.forkable), GitHub: always null. Optional - Bitbucket only (not extracted).']
+  metadata String [note: 'Full API response as JSON. Always populated for both sources. Contains complete platform-specific data.']
+  first_seen DateTime64(3) [note: 'First collection timestamp. Format: "2026-02-13 12:00:31.642". GitHub: populated, Bitbucket: "2025-12-31 05:09:09.334" or null.']
+  last_updated DateTime64(3) [note: 'Last collection timestamp. Format: "2026-02-13 12:00:31.642". GitHub: populated, Bitbucket: "2026-01-03 15:41:32.437" or null.']
+  last_commit_date DateTime64(3) [note: 'Most recent commit date. Format: "2024-11-14 14:58:00.000". GitHub: null, Bitbucket: populated or null.']
+  last_commit_date_first_seen DateTime64(3) [note: 'First time last_commit_date was seen. Format: "2025-12-31 05:09:40.075". Nullable.']
+  last_commit_date_last_checked DateTime64(3) [note: 'Last time last_commit_date was checked. Format: "2026-01-03 15:41:44.001". Nullable.']
+  is_empty Int64 [note: '1 if repository has no commits, 0 if has commits. Bitbucket: 0, GitHub: null. Nullable.']
+  _version UInt64 [note: 'Version for deduplication. Example: 1770984031642, 1767636245639. Millisecond timestamp.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics", "" (empty).']
+  
+  Indexes {
+    (project_key, repo_slug, data_source) [name: 'idx_repo_lookup']
+  }
+  
+  Note: 'Repository metadata from Bitbucket/GitHub APIs'
+}
+
+// ============================================================================
+// COMMITS
+// ============================================================================
+
+Table git_commits {
+  id Int64 [pk]
+  project_key String [note: 'Repository owner. GitHub: "GlobalTypeSystem", Bitbucket: "abc". Required.']
+  repo_slug String [note: 'Repository name. GitHub: "gts-go", Bitbucket: "k8s-platform-chart". Required.']
+  commit_hash String [note: 'Git SHA-1 hash (40 chars). Example: "1167e2a04964da044b891a766f2b57d7fb012d3f", "e7c304462a0e0123e2997fe9541a321cfe6595a5". Required.']
+  branch String [note: 'Branch name. GitHub: "main", Bitbucket: "release/25.12". Nullable.']
+  author_name String [note: 'Commit author. GitHub: "alice", Bitbucket: "John.Smith" (dot-separated). Required.']
+  author_email String [note: 'Author email. GitHub: "alice@example.com", Bitbucket: "John.Smith@company.com". Required.']
+  committer_name String [note: 'Committer name. GitHub: "GitHub" (for web commits), Bitbucket: "John.Smith". Required.']
+  committer_email String [note: 'Committer email. GitHub: "noreply@github.com", Bitbucket: "John.Smith@company.com". Required.']
+  message String [note: 'Commit message. GitHub: "Add NOTICE file...", Bitbucket: "PLTFRM-84253 fix unstable...". Required.']
+  date DateTime64(3) [note: 'Commit timestamp. Format: "2026-02-10 20:24:45.000", "2025-11-20 09:52:55.000". Converted from GitHub ISO8601 or Bitbucket ms. Required.']
+  parents String [note: 'JSON array of parent hashes. GitHub: ["79262ab..."], Bitbucket: [{"id":"1056d1...","displayId":"1056d1151d0",...}]. Bitbucket includes full objects. Required.']
+  files_changed Int64 [note: 'Number of files modified. GitHub: 15, Bitbucket: 3. Nullable.']
+  lines_added Int64 [note: 'Lines added. GitHub: 15, Bitbucket: 42. Nullable.']
+  lines_removed Int64 [note: 'Lines removed. GitHub: 0, Bitbucket: 36. Nullable.']
+  language_breakdown String [note: 'JSON object {language: line_count}. GitHub: {"Other":15}, Bitbucket: null (not calculated). Optional - GitHub only.']
+  is_merge_commit Int64 [note: '1 if multiple parents, 0 otherwise. GitHub: 0, Bitbucket: 0. Nullable.']
+  metadata String [note: 'Full API response. Always populated. Contains platform-specific fields.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-13 12:00:32.923". Required.']
+  _version UInt64 [note: 'Deduplication version. Example: 1770984032928. Millisecond timestamp.']
+  ai_percentage Float32 [default: 0, note: 'AI-generated code percentage. 0.0 to 1.0. Default: 0.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics", "" (empty). Required.']
+  hash_sum String [note: 'Deduplication hash. GitHub: null, Bitbucket: "221d85917479ba90..." (comma-separated). Optional - Bitbucket only.']
+  scancode_metadata String [note: 'License/copyright scanning. JSON array. GitHub: null, Bitbucket: null or populated. Nullable.']
+  ai_thirdparty_repos String [note: 'Third-party repo detection. GitHub: null, Bitbucket: null. Nullable.']
+  ai_thirdparty_flag UInt8 [note: 'AI-detected third-party. 0 or 1. Default: 0.']
+  scancode_thirdparty_flag UInt8 [note: 'Scancode-detected third-party. 0 or 1. Default: 0.']
+  diffstat_metadata String [default: '', note: 'JSON array of file changes. Format: [{"path":{"components":[...],"toString":"..."},"type":"MODIFIED","lines_added":50,"lines_removed":20}]. GitHub: "" (empty), Bitbucket: "" (empty). Often not populated.']
+  
+  Indexes {
+    (project_key, repo_slug, commit_hash, data_source) [name: 'idx_commit_lookup']
+    (date) [name: 'idx_commit_date']
+  }
+  
+  Note: 'Commit data from repository history'
+}
+
+// ============================================================================
+// COMMIT FILES (detailed file-level changes)
+// ============================================================================
+
+Table git_commit_files {
+  id Int64 [pk]
+  project_key String [note: 'Repository owner. Bitbucket: "aa". Required.']
+  repo_slug String [note: 'Repository name. Bitbucket: "access-client-ios". Required.']
+  commit_hash String [note: 'Parent commit SHA. Example: "10ab40f5841265dc925025167bf84eafd2dbbad3". Required.']
+  diff_hash String [note: 'Hash of diff content. Example: "da93104036e6be885d151791c968baf9a111a9b3...". Required.']
+  file_path String [note: 'Full file path. Example: "Classes/Helpers/PEZPSPDFKitHelper.h", "src/main/java/File.java". Required.']
+  file_extension String [note: 'File extension. Example: "h", "java", "py". Nullable.']
+  lines_added Int64 [note: 'Lines added in this file. Example: 1, 50. Nullable.']
+  lines_removed Int64 [note: 'Lines removed in this file. Example: 5, 20. Nullable.']
+  ai_thirdparty_flag UInt8 [note: 'AI-detected third-party code. 0 or 1. Default: 0.']
+  scancode_thirdparty_flag UInt8 [note: 'Scancode-detected third-party. 0 or 1. Default: 0.']
+  scancode_metadata String [note: 'License/copyright JSON. Format: [{"path":"...","copyrights":[{"copyright":"Copyright (c) 2026 Company"}],"holders":[{"holder":"Company"}],"authors":[{"author":"John Smith"}]}]. Bitbucket: populated with rich data. Optional - Bitbucket only.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-13 16:07:23.857". Required.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  data_source String [note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "dev_metrics". Required.']
+  
+  Indexes {
+    (project_key, repo_slug, commit_hash, file_path, data_source) [name: 'idx_file_lookup']
+  }
+  
+  Note: 'File-level details for each commit'
+}
+
+// ============================================================================
+// PULL REQUESTS
+// ============================================================================
+
+Table git_pull_requests {
+  id Int64 [pk, note: 'Auto-generated ID. GitHub: 0, Bitbucket: 17713680643788094.']
+  project_key String [note: 'Repository owner. GitHub: "GlobalTypeSystem", Bitbucket: "abc". Required.']
+  repo_slug String [note: 'Repository name. GitHub: "gts-go", Bitbucket: "k8s-platform-chart". Required.']
+  pr_id Int64 [note: 'PR database ID. GitHub: 3018797339 (databaseId), Bitbucket: 10492 (id). Required.']
+  pr_number Int64 [note: 'PR display number. GitHub: 4 (number), Bitbucket: 10492 (same as pr_id). Required.']
+  title String [note: 'PR title. GitHub: "feat: cli", Bitbucket: "Hotfix/fix automerge conflicts 25 12". Required.']
+  description String [note: 'PR body/description. GitHub: "" (empty), Bitbucket: "" (empty). Can be empty. Nullable.']
+  state String [note: 'PR state. GitHub: "MERGED"/"OPEN"/"CLOSED", Bitbucket: "MERGED"/"OPEN"/"DECLINED". Required.']
+  author_name String [note: 'PR author username. GitHub: "devjow", Bitbucket: "snaumenko". Required.']
+  author_uuid String [note: 'Author ID. GitHub: "239822647" (user.id), Bitbucket: "152" (user.id). Required.']
+  created_on DateTime64(3) [note: 'PR creation time. Format: "2025-11-17 19:45:14.000", "2025-11-27 11:37:47.000". Required.']
+  updated_on DateTime64(3) [note: 'Last update time. Format: "2025-11-22 10:07:07.000", "2025-11-27 11:51:29.000". Required.']
+  closed_on DateTime64(3) [note: 'Close/merge time. Format: "2025-11-22 10:07:07.000". Nullable.']
+  merge_commit_hash String [note: 'Merge commit SHA. GitHub: "e6c0dad65ca9fb6c7858377e8740cf608d15a0cf", Bitbucket: "db1147f6b0da1cdec3ec5a18dd9379aacfa0f869". Nullable.']
+  source_branch String [note: 'Source/head branch. GitHub: "feat/cli", Bitbucket: "hotfix/fix_automerge_conflicts_25_12". Required.']
+  destination_branch String [note: 'Target/base branch. GitHub: "main", Bitbucket: "release/25.12". Required.']
+  commit_count Int64 [note: 'Number of commits. GitHub: 2, Bitbucket: 1. Nullable.']
+  comment_count Int64 [note: 'Number of comments. GitHub: null, Bitbucket: 0. Nullable.']
+  task_count Int64 [note: 'Number of tasks. GitHub: null (not applicable), Bitbucket: 0. Optional - Bitbucket only.']
+  files_changed Int64 [note: 'Files modified. GitHub: 18, Bitbucket: 1. Nullable.']
+  lines_added Int64 [note: 'Lines added. GitHub: 1108, Bitbucket: 1. Nullable.']
+  lines_removed Int64 [note: 'Lines removed. GitHub: 14, Bitbucket: 1. Nullable.']
+  duration_seconds Int64 [note: 'Time from creation to close in seconds. GitHub: 397313 (4.6 days), Bitbucket: 822 (13.7 min). Nullable.']
+  jira_tickets String [note: 'JSON array of Jira IDs. Example: ["PROJ-123","PROJ-456"]. GitHub: null, Bitbucket: null. Nullable.']
+  metadata String [note: 'Full API response. Always populated. Contains platform-specific data.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-13 12:08:15.565". Required.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics". Required.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  diffstat_metadata String [default: '', note: 'JSON array of file changes. GitHub: "" (empty), Bitbucket: "" (empty). Often not populated.']
+  
+  Indexes {
+    (project_key, repo_slug, pr_id, data_source) [name: 'idx_pr_lookup']
+    (updated_on) [name: 'idx_pr_updated']
+    (state) [name: 'idx_pr_state']
+  }
+  
+  Note: 'Pull request metadata'
+}
+
+// ============================================================================
+// PR REVIEWERS
+// ============================================================================
+
+Table git_pull_requests_reviewers {
+  id Int64 [pk]
+  project_key String [note: 'Repository owner. Required.']
+  repo_slug String [note: 'Repository name. Required.']
+  pr_id Int64 [note: 'Parent PR ID. Required.']
+  reviewer_name String [note: 'Reviewer username. GitHub: "bob", Bitbucket: "jane.smith". Required.']
+  reviewer_uuid String [note: 'Reviewer ID. GitHub: "192502778" (user.id), Bitbucket: "660" (user.id). Required.']
+  reviewer_email String [note: 'Reviewer email. GitHub: "" (empty/not provided), Bitbucket: "Jane.Smith@company.com". Nullable.']
+  status String [note: 'Review status. GitHub: "approved"/"APPROVED"/"CHANGES_REQUESTED"/"COMMENTED", Bitbucket: "UNAPPROVED"/"APPROVED". Required.']
+  role String [note: 'Reviewer role. GitHub: "REVIEWER", Bitbucket: "REVIEWER". Always "REVIEWER" for this table. Required.']
+  approved Int64 [note: 'Approval flag. 1=approved, 0=not approved. GitHub: 1, Bitbucket: 0. Required.']
+  reviewed_at DateTime64(3) [note: 'Review submission time. Format: "2025-11-22 10:07:03.000". GitHub: populated, Bitbucket: null (often not available). Nullable.']
+  metadata String [note: 'Review metadata as JSON. Always populated.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-13 12:08:15.565". Required.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics". Required.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  
+  Indexes {
+    (project_key, repo_slug, pr_id, reviewer_uuid, data_source) [name: 'idx_reviewer_lookup']
+  }
+  
+  Note: 'PR reviewers and their review status'
+}
+
+// ============================================================================
+// PR COMMENTS
+// ============================================================================
+
+Table git_pr_comments {
+  id Int64 [pk]
+  project_key String [note: 'Repository owner. Required.']
+  repo_slug String [note: 'Repository name. Required.']
+  pr_id Int64 [note: 'Parent PR ID. Required.']
+  comment_id Int64 [note: 'Comment ID from API. GitHub: 2603317285, Bitbucket: 2850386. Required.']
+  content String [note: 'Comment text. GitHub: "> The test field indicates...", Bitbucket: "✅ **Security scan passed**...". Supports Markdown. Required.']
+  author_name String [note: 'Comment author. GitHub: "reviewer1", Bitbucket: "bot_user". Required.']
+  author_uuid String [note: 'Author ID. GitHub: "" (empty/not provided), Bitbucket: "5794". Nullable.']
+  author_email String [note: 'Author email. GitHub: "" (empty), Bitbucket: "bot_user@company.com". Nullable.']
+  created_at DateTime64(3) [note: 'Comment creation time. Format: "2025-12-09 16:03:18.000", "2025-05-06 08:10:37.307". Required.']
+  updated_at DateTime64(3) [note: 'Last update time. Format: "2025-12-09 16:03:18.000". Required.']
+  state String [note: 'Thread state. GitHub: null (not applicable), Bitbucket: "OPEN"/"RESOLVED". Optional - Bitbucket only.']
+  severity String [note: 'Comment severity. GitHub: null (not applicable), Bitbucket: "NORMAL"/"BLOCKER". Optional - Bitbucket only.']
+  thread_resolved Int64 [note: 'Thread resolved flag. GitHub: null (not applicable), Bitbucket: 0 or 1. Optional - Bitbucket only.']
+  file_path String [note: 'File path for inline comments. GitHub: "gts-macros/Cargo.toml", Bitbucket: null. Nullable.']
+  line_number Int64 [note: 'Line number for inline comments. GitHub: 15, Bitbucket: null. Nullable.']
+  metadata String [note: 'Comment metadata as JSON. Always populated.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-13 12:08:14.015". Required.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics". Required.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  
+  Indexes {
+    (project_key, repo_slug, pr_id, comment_id, data_source) [name: 'idx_comment_lookup']
+  }
+  
+  Note: 'PR comments and review comments'
+}
+
+// ============================================================================
+// PR COMMITS (commits associated with PRs)
+// ============================================================================
+
+Table git_pr_commits {
+  id Int64 [pk]
+  project_key String [note: 'Repository owner. Required.']
+  repo_slug String [note: 'Repository name. Required.']
+  pr_id Int64 [note: 'Parent PR ID. GitHub: 3018797339, Bitbucket: 10489. Required.']
+  commit_hash String [note: 'Commit SHA. GitHub: "044295536b349f74e154b0770582c548d710f856", Bitbucket: "a749767deeac85d702fe97bcfab57ea1797e7511". Required.']
+  commit_order Int64 [note: 'Order in PR (0-indexed). GitHub: 0, Bitbucket: 1. Required.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-13 12:08:15.565". Required.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics". Required.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  
+  Indexes {
+    (project_key, repo_slug, pr_id, commit_hash, data_source) [name: 'idx_pr_commit_lookup']
+  }
+  
+  Note: 'Links commits to pull requests (many-to-many relationship)'
+}
+
+// ============================================================================
+// PR PARTICIPANTS (Bitbucket-specific, GitHub uses reviewers)
+// ============================================================================
+
+Table git_pr_participants {
+  id Int64 [pk]
+  project_key String [note: 'Repository owner. Required.']
+  repo_slug String [note: 'Repository name. Required.']
+  pr_id Int64 [note: 'Parent PR ID. Required.']
+  participant_name String [note: 'Participant username. Bitbucket: "auto_user". GitHub: not used (no data). Required for Bitbucket.']
+  participant_uuid String [note: 'Participant ID. Bitbucket: "5538". GitHub: not used. Required for Bitbucket.']
+  participant_email String [note: 'Participant email. Bitbucket: "auto_user@company.com". GitHub: not used. Required for Bitbucket.']
+  role String [note: 'Participant role. Bitbucket: "PARTICIPANT"/"REVIEWER". GitHub: not used. Bitbucket-specific concept. Required for Bitbucket.']
+  metadata String [note: 'Participant metadata. Always populated for Bitbucket.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-17 22:41:06.178". Required.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server" (Bitbucket only - GitHub does not populate this table). Legacy: "dev_metrics", "" (empty).']
+  
+  Indexes {
+    (project_key, repo_slug, pr_id, participant_uuid, data_source) [name: 'idx_participant_lookup']
+  }
+  
+  Note: 'PR participants (Bitbucket concept, broader than reviewers)'
+}
+
+// ============================================================================
+// JIRA TICKETS (extracted from PR titles/descriptions and commit messages)
+// ============================================================================
+
+Table git_tickets {
+  id Int64 [pk]
+  external_ticket_id String [note: 'External ticket ID. Format: PROJECT-NUMBER (e.g., "PLTFRM-84867", "ABC-123"). Extracted via regex \\b([A-Z][A-Z0-9]+-\\d+)\\b from PR titles/descriptions and commit messages. Required.']
+  project_key String [note: 'Repository owner. GitHub: "myorg", Bitbucket: "abc". Required.']
+  repo_slug String [note: 'Repository name. GitHub: "go-authkit", Bitbucket: "k8s-platform-chart". Required.']
+  pr_id Int64 [note: 'Associated PR ID if from PR. GitHub: 3137177218, Bitbucket: 10492. 0 if from commit. Nullable.']
+  commit_hash String [note: 'Associated commit SHA if from commit. Empty "" if from PR. Nullable.']
+  collected_at DateTime64(3) [note: 'Collection timestamp. Format: "2026-02-13 12:09:14.220". Required.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics". Required.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  
+  Indexes {
+    (external_ticket_id, project_key, repo_slug, data_source) [name: 'idx_jira_lookup']
+    (pr_id) [name: 'idx_jira_pr']
+    (commit_hash) [name: 'idx_jira_commit']
+  }
+  
+  Note: 'Ticket references (e.g., Jira) extracted from PRs and commits'
+}
+
+// ============================================================================
+// COLLECTION RUNS (tracking data collection executions)
+// ============================================================================
+
+Table git_collection_runs {
+  id Int64 [pk]
+  run_id String [note: 'Unique run identifier. Example: "github-2026-02-13-120000", "bitbucket-2026-02-13-080000". Required.']
+  started_at DateTime64(3) [note: 'Run start time. Format: "2026-02-13 12:00:00.000". Required.']
+  completed_at DateTime64(3) [note: 'Run completion time. Format: "2026-02-13 12:15:30.000". Nullable.']
+  status String [note: 'Run status. Values: "running", "completed", "failed". Required.']
+  repos_processed Int64 [note: 'Number of repositories processed. GitHub: 24, Bitbucket: 150. Nullable.']
+  commits_collected Int64 [note: 'Number of commits collected. GitHub: 1036, Bitbucket: 5000. Nullable.']
+  prs_collected Int64 [note: 'Number of PRs collected. GitHub: 432, Bitbucket: 1200. Nullable.']
+  api_calls Int64 [note: 'Number of API calls made. GitHub: 2500, Bitbucket: 8000. Nullable.']
+  errors Int64 [note: 'Number of errors encountered. Example: 0, 5. Nullable.']
+  settings String [note: 'Collection settings as JSON. Example: {"since":"2026-01-01",...}. Always populated.']
+  _version UInt64 [note: 'Deduplication version. Millisecond timestamp.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "airnd_github", "dev_metrics", "" (empty). Required.']
+  
+  Note: 'Tracks each data collection run for monitoring'
+}
+
+// ============================================================================
+// REPOSITORY BRANCHES (branch tracking for incremental collection)
+// ============================================================================
+
+Table git_repository_branches {
+  id Int64 [pk]
+  project_key String [note: 'Repository owner. Bitbucket: "FIVENINE". Required.']
+  repo_slug String [note: 'Repository name. Bitbucket: "ap-antiviruscommon". Required.']
+  branch_name String [note: 'Branch name. Bitbucket: "master", "main", "develop". Required.']
+  is_default Int64 [note: '1 if default branch, 0 otherwise. Bitbucket: 1. Required.']
+  last_commit_hash String [note: 'Last collected commit SHA. Bitbucket: null (not populated in current data). Nullable.']
+  last_commit_date DateTime64(3) [note: 'Date of last commit. Format: "2026-02-10 20:24:45.000". Bitbucket: null (not populated). Nullable.']
+  last_checked_at String [note: 'Last check timestamp. Bitbucket: "1767454894233" (milliseconds). Format varies - can be ms timestamp or ISO string. Nullable.']
+  metadata String [note: 'Branch metadata as JSON. Bitbucket: null (not populated). Nullable.']
+  _version UInt64 [note: 'Deduplication version. Example: 1767636246909. Millisecond timestamp.']
+  data_source String [default: '', note: 'Source discriminator. Values: "insight_bitbucket_server", "insight_github", "insight_gitlab", "custom_etl". Legacy: "dev_metrics", "" (empty). Required.']
+  
+  Indexes {
+    (project_key, repo_slug, branch_name, data_source) [name: 'idx_branch_lookup']
+  }
+  
+  Note: 'Branch state for incremental collection'
+}
+
+// ============================================================================
+// MATERIALIZED VIEW (denormalized PR data)
+// ============================================================================
+
+Table git_prs_with_metadata {
+  pr_id Int64 [pk, note: 'PR database ID. Required.']
+  bitbucket_pr_id Int64 [note: 'Original PR ID (for backward compatibility). Same as pr_id. Nullable.']
+  title String [note: 'PR title. Example: "feat: cli", "Hotfix/fix automerge conflicts". Required.']
+  description String [note: 'PR description. Can be empty. Nullable.']
+  author_name String [note: 'PR author username. Required.']
+  state String [note: 'PR state. Values: "OPEN", "MERGED", "CLOSED", "DECLINED". Required.']
+  created_on DateTime64(3) [note: 'PR creation time. Format: "2025-11-17 19:45:14.000". Required.']
+  updated_on DateTime64(3) [note: 'Last update time. Format: "2025-11-22 10:07:07.000". Required.']
+  closed_on DateTime64(3) [note: 'Close/merge time. Format: "2025-11-22 10:07:07.000". Nullable.']
+  repo_slug String [note: 'Repository name. Required.']
+  project_key String [note: 'Repository owner. Required.']
+  source_branch String [note: 'Source branch. Example: "feat/cli". Required.']
+  destination_branch String [note: 'Target branch. Example: "main". Required.']
+  data_source String [note: 'Source discriminator. Legacy values: "airnd_github", "dev_metrics", "" (empty). Required.']
+  
+  Note: 'Materialized view for faster PR queries (denormalized, subset of fields)'
+}
+
+// ============================================================================
+// RELATIONSHIPS
+// ============================================================================
+
+Ref: git_commits.project_key > git_repositories.project_key
+Ref: git_commits.repo_slug > git_repositories.repo_slug
+
+Ref: git_commit_files.project_key > git_repositories.project_key
+Ref: git_commit_files.repo_slug > git_repositories.repo_slug
+Ref: git_commit_files.commit_hash > git_commits.commit_hash
+
+Ref: git_pull_requests.project_key > git_repositories.project_key
+Ref: git_pull_requests.repo_slug > git_repositories.repo_slug
+
+Ref: git_pull_requests_reviewers.project_key > git_repositories.project_key
+Ref: git_pull_requests_reviewers.repo_slug > git_repositories.repo_slug
+Ref: git_pull_requests_reviewers.pr_id > git_pull_requests.pr_id
+
+Ref: git_pr_comments.project_key > git_repositories.project_key
+Ref: git_pr_comments.repo_slug > git_repositories.repo_slug
+Ref: git_pr_comments.pr_id > git_pull_requests.pr_id
+
+Ref: git_pr_commits.project_key > git_repositories.project_key
+Ref: git_pr_commits.repo_slug > git_repositories.repo_slug
+Ref: git_pr_commits.pr_id > git_pull_requests.pr_id
+Ref: git_pr_commits.commit_hash > git_commits.commit_hash
+
+Ref: git_pr_participants.project_key > git_repositories.project_key
+Ref: git_pr_participants.repo_slug > git_repositories.repo_slug
+Ref: git_pr_participants.pr_id > git_pull_requests.pr_id
+
+Ref: git_tickets.project_key > git_repositories.project_key
+Ref: git_tickets.repo_slug > git_repositories.repo_slug
+
+Ref: git_repository_branches.project_key > git_repositories.project_key
+Ref: git_repository_branches.repo_slug > git_repositories.repo_slug
