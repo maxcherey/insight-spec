@@ -1,5 +1,110 @@
 # Connector Reference: Data Sources for Constructor Insight
 
+
+<!-- toc -->
+
+- [How Data Flows](#how-data-flows)
+- [Source 1: GitHub (Version Control)](#source-1-github-version-control)
+  - [`github_repositories`](#githubrepositories)
+  - [`github_branches`](#githubbranches)
+  - [`github_commits`](#githubcommits)
+  - [`github_commit_files` — Per-file line changes](#githubcommitfiles-per-file-line-changes)
+  - [`github_pull_requests`](#githubpullrequests)
+  - [`github_pull_request_reviews` — Formal review submissions](#githubpullrequestreviews-formal-review-submissions)
+  - [`github_pull_request_comments`](#githubpullrequestcomments)
+  - [`github_pull_request_commits`](#githubpullrequestcommits)
+  - [`github_ticket_refs` — Ticket references extracted from PRs and commits](#githubticketrefs-ticket-references-extracted-from-prs-and-commits)
+  - [`github_collection_runs` — Connector execution log](#githubcollectionruns-connector-execution-log)
+- [Source 2: Bitbucket (Version Control)](#source-2-bitbucket-version-control)
+- [Source 3: GitLab (Version Control)](#source-3-gitlab-version-control)
+- [Source 4: YouTrack (Task Tracking)](#source-4-youtrack-task-tracking)
+  - [`youtrack_issue` — Issue identifiers and timestamps](#youtrackissue-issue-identifiers-and-timestamps)
+  - [`youtrack_issue_history` — Complete field change log](#youtrackissuehistory-complete-field-change-log)
+  - [`youtrack_user` — User directory](#youtrackuser-user-directory)
+- [Source 5: Jira (Task Tracking)](#source-5-jira-task-tracking)
+  - [`jira_issue` — Issue identifiers and timestamps](#jiraissue-issue-identifiers-and-timestamps)
+  - [`jira_issue_history` — Complete changelog (field change log)](#jiraissuehistory-complete-changelog-field-change-log)
+  - [`jira_user` — User directory](#jirauser-user-directory)
+- [Source 6: Microsoft 365 (Communication)](#source-6-microsoft-365-communication)
+  - [`ms365_email_activity` — Email activity per user per date](#ms365emailactivity-email-activity-per-user-per-date)
+  - [`ms365_teams_activity` — Teams activity per user per date](#ms365teamsactivity-teams-activity-per-user-per-date)
+  - [`ms365_onedrive_activity` — OneDrive activity per user per date](#ms365onedriveactivity-onedrive-activity-per-user-per-date)
+  - [`ms365_sharepoint_activity` — SharePoint activity per user per date](#ms365sharepointactivity-sharepoint-activity-per-user-per-date)
+- [Source 7: Zulip (Chat)](#source-7-zulip-chat)
+  - [`zulip_users` — User directory](#zulipusers-user-directory)
+  - [`zulip_messages` — Aggregated message counts per sender](#zulipmessages-aggregated-message-counts-per-sender)
+- [Source 8: Cursor (AI Dev Tool)](#source-8-cursor-ai-dev-tool)
+  - [`cursor_daily_usage` — Daily aggregated usage per user](#cursordailyusage-daily-aggregated-usage-per-user)
+  - [`cursor_events` — Individual AI invocation events](#cursorevents-individual-ai-invocation-events)
+  - [`cursor_events_token_usage` — Token consumption per event (1:1 with cursor_events)](#cursoreventstokenusage-token-consumption-per-event-11-with-cursorevents)
+- [Source 9: Windsurf (AI Dev Tool)](#source-9-windsurf-ai-dev-tool)
+  - [`windsurf_daily_usage` — Daily aggregated usage per user](#windsurfdailyusage-daily-aggregated-usage-per-user)
+  - [`windsurf_events` — Individual AI invocation events](#windsurfevents-individual-ai-invocation-events)
+- [Unified Stream 1: `class_communication_events`](#unified-stream-1-classcommunicationevents)
+- [Unified Stream 2: Task Tracker (Silver → Gold)](#unified-stream-2-task-tracker-silver-gold)
+  - [Silver Step 1: `class_task_tracker_activities` — Unified event stream](#silver-step-1-classtasktrackeractivities-unified-event-stream)
+  - [Silver Step 1 (parallel): `class_task_tracker_snapshot` — Current state (upsert)](#silver-step-1-parallel-classtasktrackersnapshot-current-state-upsert)
+  - [Silver Step 2: `class_task_tracker` — Identity resolution + final Silver contract](#silver-step-2-classtasktracker-identity-resolution-final-silver-contract)
+  - [Gold: Derived metrics (built on top of `class_task_tracker`)](#gold-derived-metrics-built-on-top-of-classtasktracker)
+- [Source 10: BambooHR (HR)](#source-10-bamboohr-hr)
+  - [`bamboohr_employees` — Employee records](#bamboohremployees-employee-records)
+  - [`bamboohr_departments` — Department hierarchy](#bamboohrdepartments-department-hierarchy)
+  - [`bamboohr_leave_requests` — Time off requests](#bamboohrleaverequests-time-off-requests)
+- [Source 11: Workday (HR)](#source-11-workday-hr)
+  - [`workday_workers` — Worker records (point-in-time)](#workdayworkers-worker-records-point-in-time)
+  - [`workday_organizations` — Org units (departments, supervisory orgs, cost centers)](#workdayorganizations-org-units-departments-supervisory-orgs-cost-centers)
+  - [`workday_leave` — Leave of absence and time off](#workdayleave-leave-of-absence-and-time-off)
+- [Source 12: LDAP / Active Directory (Directory)](#source-12-ldap-active-directory-directory)
+  - [`ldap_users` — User account directory](#ldapusers-user-account-directory)
+  - [`ldap_group_members` — Group and OU membership](#ldapgroupmembers-group-and-ou-membership)
+- [Source 13: Claude API (AI Tool)](#source-13-claude-api-ai-tool)
+  - [`claude_api_daily_usage` — Daily token usage per API key per model](#claudeapidailyusage-daily-token-usage-per-api-key-per-model)
+  - [`claude_api_requests` — Individual API request events](#claudeapirequests-individual-api-request-events)
+- [Source 14: Claude Team Plan (AI Tool)](#source-14-claude-team-plan-ai-tool)
+  - [`claude_team_seats` — Seat assignment and status](#claudeteamseats-seat-assignment-and-status)
+  - [`claude_team_activity` — Daily usage per user per model per client](#claudeteamactivity-daily-usage-per-user-per-model-per-client)
+- [Source 15: GitHub Copilot (AI Dev Tool)](#source-15-github-copilot-ai-dev-tool)
+  - [`copilot_seats` — Seat assignment and last activity](#copilotseats-seat-assignment-and-last-activity)
+  - [`copilot_usage` — Org-level daily usage totals](#copilotusage-org-level-daily-usage-totals)
+  - [`copilot_usage_breakdown` — Daily breakdown by language and editor](#copilotusagebreakdown-daily-breakdown-by-language-and-editor)
+- [Source 16: HubSpot (CRM)](#source-16-hubspot-crm)
+  - [`hubspot_contacts` — Person records](#hubspotcontacts-person-records)
+  - [`hubspot_companies` — Company / account records](#hubspotcompanies-company-account-records)
+  - [`hubspot_deals` — Deal pipeline records](#hubspotdeals-deal-pipeline-records)
+  - [`hubspot_activities` — Calls, emails, meetings, tasks](#hubspotactivities-calls-emails-meetings-tasks)
+  - [`hubspot_owners` — HubSpot user directory (salespeople)](#hubspotowners-hubspot-user-directory-salespeople)
+- [Source 17: Salesforce (CRM)](#source-17-salesforce-crm)
+  - [`salesforce_contacts`](#salesforcecontacts)
+  - [`salesforce_accounts` — Company / account records](#salesforceaccounts-company-account-records)
+  - [`salesforce_opportunities` — Deal pipeline records](#salesforceopportunities-deal-pipeline-records)
+  - [`salesforce_activities` — Tasks and Events](#salesforceactivities-tasks-and-events)
+  - [`salesforce_users` — User directory](#salesforceusers-user-directory)
+- [Source 18: OpenAI API (AI Tool)](#source-18-openai-api-ai-tool)
+  - [`openai_api_daily_usage` — Daily token usage per API key per model](#openaiapidailyusage-daily-token-usage-per-api-key-per-model)
+  - [`openai_api_requests` — Individual API request events](#openaiapirequests-individual-api-request-events)
+- [Source 19: ChatGPT Team (AI Tool)](#source-19-chatgpt-team-ai-tool)
+  - [`chatgpt_team_seats`](#chatgptteamseats)
+  - [`chatgpt_team_activity` — Daily usage per user per model](#chatgptteamactivity-daily-usage-per-user-per-model)
+- [Source 20: Allure TestOps (Quality / Testing)](#source-20-allure-testops-quality-testing)
+  - [`allure_launches` — Test run / launch records](#allurelaunches-test-run-launch-records)
+  - [`allure_test_results` — Individual test case results](#alluretestresults-individual-test-case-results)
+  - [`allure_defects` — Defects linked to test failures](#alluredefects-defects-linked-to-test-failures)
+- [All Tables at a Glance](#all-tables-at-a-glance)
+- [Open Questions](#open-questions)
+  - [OQ-1: Git deduplication across sources](#oq-1-git-deduplication-across-sources)
+  - [OQ-2: Identity re-resolution strategy](#oq-2-identity-re-resolution-strategy)
+  - [OQ-3: AI API tools — per-key user attribution](#oq-3-ai-api-tools-per-key-user-attribution)
+  - [OQ-4: Zulip Bronze schema — extra fields in stream spec](#oq-4-zulip-bronze-schema-extra-fields-in-stream-spec)
+  - [OQ-5: YouTrack Bronze schema — `source_instance_id` presence](#oq-5-youtrack-bronze-schema-sourceinstanceid-presence)
+  - [OQ-6: `class_task_tracker_activities` — author/assignee field types](#oq-6-classtasktrackeractivities-authorassignee-field-types)
+  - [OQ-7: Silver table naming convention — `class_` vs `_enriched`](#oq-7-silver-table-naming-convention-class-vs-enriched)
+  - [OQ-8: Git Bronze schema — per-source tables vs unified table with `data_source`; extra tables](#oq-8-git-bronze-schema-per-source-tables-vs-unified-table-with-datasource-extra-tables)
+  - [OQ-9: Git streams layer (`streams/raw_git/`) — relationship to Bronze](#oq-9-git-streams-layer-streamsrawgit-relationship-to-bronze)
+  - [OQ-11: Pipeline architecture model — Medallion (Bronze/Silver/Gold) vs dbt-Mart](#oq-11-pipeline-architecture-model-medallion-bronzesilvergold-vs-dbt-mart)
+  - [OQ-10: Git PR/commit field naming — `owner`/`repo_name` vs `project_key`/`repo_slug`](#oq-10-git-prcommit-field-naming-ownerreponame-vs-projectkeyreposlug)
+
+<!-- /toc -->
+
 > Version 2.13 — March 2026
 > Based on: insight-spec PR #3 (Streams Proposal), PR #1 (GitHub/Bitbucket ETL), TASK_TRACKER_ANALYTICS.md (team meetings Jan–Feb 2026)
 
@@ -402,79 +507,112 @@ Every state transition, reassignment, and field update is a separate row. Jira's
 
 ## Source 6: Microsoft 365 (Communication)
 
-**One wide table per user per date.** M365 exposes five separate report endpoints, all describing the same entity — a user's activity on a given date — with the same primary key: `userPrincipalName + reportRefreshDate`. The connector calls all endpoints and joins the responses into a single row.
+**Four separate Bronze tables** — one per report endpoint. M365 Graph API exposes Email, Teams, OneDrive, and SharePoint activity as separate endpoints. The connector stores each as its own table; all share the same identity key (`userPrincipalName + reportRefreshDate`).
 
-**Naming conflicts resolved with prefixes:** OneDrive and SharePoint share identical field names — prefixed with `od_` and `sp_` respectively. M365 Copilot fields use `cop_` prefix.
+**Field naming:** camelCase — original Graph API field names, no renaming at Bronze level.
 
-**M365 Copilot** (`getMicrosoft365CopilotUsageUserDetail`) is a separate endpoint but joins on the same key — it covers AI usage across Office apps (Chat, Teams, Word, Excel, PowerPoint, Outlook, OneNote, Loop). Not to be confused with GitHub Copilot (Source 15), which is a developer tool with a separate API.
+**M365 Copilot** (`getMicrosoft365CopilotUsageUserDetail`) is a separate Graph API endpoint covering AI usage across Office apps. Not yet collected as a Bronze table — planned for future implementation.
 
 > **Critical:** M365 Graph API returns only the last 7–30 days of activity. Data cannot be re-fetched once the window passes — loss is permanent.
 
 ---
 
-### `m365_raw` — All M365 activity per user per date
+### `ms365_email_activity` — Email activity per user per date
 
-| Field                                 | Type    | Description                            |
-| ------------------------------------- | ------- | -------------------------------------- |
-| `user_principal_name`                 | text    | User email (UPN) — primary key         |
-| `report_refresh_date`                 | date    | Report date — primary key              |
-| `display_name`                        | text    | User display name                      |
-| `is_deleted`                          | boolean | Whether the account is deleted         |
-| `assigned_products`                   | jsonb   | M365 licenses assigned                 |
-| **Email**                             |         |                                        |
-| `email_send_count`                    | numeric | Emails sent                            |
-| `email_receive_count`                 | numeric | Emails received                        |
-| `email_read_count`                    | numeric | Emails read                            |
-| `email_meeting_created_count`         | numeric | Meetings created via email             |
-| `email_meeting_interacted_count`      | numeric | Meeting interactions via email         |
-| `email_last_activity_date`            | date    | Last email activity                    |
-| **Teams**                             |         |                                        |
-| `teams_chat_group_count`              | numeric | Messages in group/team chats           |
-| `teams_chat_private_count`            | numeric | Messages in private (1:1) chats        |
-| `teams_channel_post_count`            | numeric | Posts published in team channels       |
-| `teams_channel_reply_count`           | numeric | Replies to channel posts               |
-| `teams_call_count`                    | numeric | Calls made                             |
-| `teams_meetings_attended`             | numeric | Meetings attended                      |
-| `teams_meetings_organized`            | numeric | Meetings organized                     |
-| `teams_adhoc_meetings_attended`       | numeric | Ad-hoc (unscheduled) meetings attended |
-| `teams_adhoc_meetings_organized`      | numeric | Ad-hoc meetings organized              |
-| `teams_scheduled_onetimes_attended`   | numeric | One-time scheduled meetings attended   |
-| `teams_scheduled_onetimes_organized`  | numeric | One-time scheduled meetings organized  |
-| `teams_scheduled_recurring_attended`  | numeric | Recurring meetings attended            |
-| `teams_scheduled_recurring_organized` | numeric | Recurring meetings organized           |
-| `teams_audio_duration`                | text    | Total audio call duration              |
-| `teams_video_duration`                | text    | Total video duration                   |
-| `teams_screenshare_duration`          | text    | Total screen sharing duration          |
-| `teams_urgent_messages`               | numeric | Messages sent with urgent priority     |
-| `teams_is_licensed`                   | boolean | Whether user has Teams license         |
-| `teams_is_external`                   | boolean | Whether user is an external guest      |
-| `teams_last_activity_date`            | date    | Last Teams activity                    |
-| **OneDrive**                          |         |                                        |
-| `od_viewed_or_edited_files`           | numeric | Files viewed or edited                 |
-| `od_synced_files`                     | numeric | Files synced via desktop client        |
-| `od_shared_internally`                | numeric | Files shared with internal users       |
-| `od_shared_externally`                | numeric | Files shared externally                |
-| `od_last_activity_date`               | date    | Last OneDrive activity                 |
-| **SharePoint**                        |         |                                        |
-| `sp_viewed_or_edited_files`           | numeric | SharePoint files viewed or edited      |
-| `sp_visited_pages`                    | numeric | SharePoint pages visited               |
-| `sp_synced_files`                     | numeric | Files synced from SharePoint           |
-| `sp_shared_internally`                | numeric | Files shared internally                |
-| `sp_shared_externally`                | numeric | Files shared externally                |
-| `sp_last_activity_date`               | date    | Last SharePoint activity               |
-| **M365 Copilot**                      |         |                                        |
-| `cop_is_licensed`                     | boolean | Whether user has M365 Copilot license  |
-| `cop_last_activity_date`              | date    | Last activity across any Copilot app   |
-| `cop_chat_count`                      | numeric | Microsoft 365 Chat (Business Chat) interactions |
-| `cop_teams_count`                     | numeric | Copilot in Teams actions (meeting recaps, channel summaries, etc.) |
-| `cop_word_count`                      | numeric | Copilot in Word actions (drafts, rewrites, summaries) |
-| `cop_excel_count`                     | numeric | Copilot in Excel actions (analysis, formulas, charts) |
-| `cop_powerpoint_count`                | numeric | Copilot in PowerPoint actions (slide generation, summaries) |
-| `cop_outlook_count`                   | numeric | Copilot in Outlook actions (email drafts, thread summaries) |
-| `cop_onenote_count`                   | numeric | Copilot in OneNote actions |
-| `cop_loop_count`                      | numeric | Copilot in Loop actions |
+| Field | Type | Description |
+|-------|------|-------------|
+| `unique` | text | Primary key |
+| `userPrincipalName` | text | User email (UPN) — identity key |
+| `reportRefreshDate` | date | Report date |
+| `reportPeriod` | text | Report period duration, e.g. `"7"` |
+| `displayName` | text | User display name |
+| `isDeleted` | boolean | Whether the account is deleted |
+| `assignedProducts` | jsonb | M365 licenses assigned |
+| `sendCount` | numeric | Emails sent |
+| `receiveCount` | numeric | Emails received |
+| `readCount` | numeric | Emails read |
+| `meetingCreatedCount` | numeric | Meetings created via email |
+| `meetingInteractedCount` | numeric | Meeting interactions via email |
+| `lastActivityDate` | date | Last email activity (NULL if none) |
 
-**What feeds downstream:** Email and Teams fields → `class_communication_events` (Silver step 1). OneDrive, SharePoint, and M365 Copilot fields are collected but not yet mapped to a unified stream — available for future use without re-fetching.
+---
+
+### `ms365_teams_activity` — Teams activity per user per date
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `unique` | text | Primary key |
+| `userPrincipalName` | text | User email (UPN) — identity key |
+| `userId` | text | Microsoft internal user ID |
+| `reportRefreshDate` | date | Report date |
+| `reportPeriod` | text | Report period duration |
+| `tenantDisplayName` | text | M365 tenant name |
+| `isDeleted` | boolean | Whether the account is deleted |
+| `isLicensed` | boolean | Whether user has Teams license |
+| `isExternal` | boolean | Whether user is an external guest |
+| `hasOtherAction` | boolean | Whether user had other Teams actions not captured by specific metrics |
+| `assignedProducts` | jsonb | M365 licenses assigned |
+| `teamChatMessageCount` | numeric | Messages in team/group chats |
+| `privateChatMessageCount` | numeric | Messages in private (1:1) chats |
+| `postMessages` | numeric | Posts published in team channels |
+| `replyMessages` | numeric | Replies to channel posts |
+| `callCount` | numeric | Calls made |
+| `meetingCount` | numeric | Total meetings count |
+| `meetingsAttendedCount` | numeric | Meetings attended |
+| `meetingsOrganizedCount` | numeric | Meetings organized |
+| `adHocMeetingsAttendedCount` | numeric | Ad-hoc (unscheduled) meetings attended |
+| `adHocMeetingsOrganizedCount` | numeric | Ad-hoc meetings organized |
+| `scheduledOneTimeMeetingsAttendedCount` | numeric | One-time scheduled meetings attended |
+| `scheduledOneTimeMeetingsOrganizedCount` | numeric | One-time scheduled meetings organized |
+| `scheduledRecurringMeetingsAttendedCount` | numeric | Recurring meetings attended |
+| `scheduledRecurringMeetingsOrganizedCount` | numeric | Recurring meetings organized |
+| `audioDuration` | text | Total audio call duration |
+| `videoDuration` | text | Total video duration |
+| `screenShareDuration` | text | Total screen sharing duration |
+| `urgentMessages` | numeric | Messages sent with urgent priority |
+| `sharedChannelTenantDisplayNames` | text | Tenant names for shared channels |
+| `lastActivityDate` | date | Last Teams activity |
+
+**Total chat messages** = `teamChatMessageCount + privateChatMessageCount`. `postMessages` and `replyMessages` are channel activity (content publishing), not direct messaging — exclude from message counts.
+
+---
+
+### `ms365_onedrive_activity` — OneDrive activity per user per date
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `unique` | text | Primary key |
+| `userPrincipalName` | text | User email (UPN) — identity key |
+| `reportRefreshDate` | date | Report date |
+| `reportPeriod` | text | Report period duration |
+| `isDeleted` | boolean | Whether the account is deleted |
+| `assignedProducts` | jsonb | M365 licenses assigned |
+| `viewedOrEditedFileCount` | numeric | Files viewed or edited |
+| `syncedFileCount` | numeric | Files synced via desktop client |
+| `sharedInternallyFileCount` | numeric | Files shared with internal users |
+| `sharedExternallyFileCount` | numeric | Files shared externally |
+| `lastActivityDate` | date | Last OneDrive activity |
+
+---
+
+### `ms365_sharepoint_activity` — SharePoint activity per user per date
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `unique` | text | Primary key |
+| `userPrincipalName` | text | User email (UPN) — identity key |
+| `reportRefreshDate` | date | Report date |
+| `reportPeriod` | text | Report period duration |
+| `isDeleted` | boolean | Whether the account is deleted |
+| `assignedProducts` | jsonb | M365 licenses assigned |
+| `viewedOrEditedFileCount` | numeric | SharePoint files viewed or edited |
+| `visitedPageCount` | numeric | SharePoint pages visited |
+| `syncedFileCount` | numeric | Files synced from SharePoint |
+| `sharedInternallyFileCount` | numeric | Files shared internally |
+| `sharedExternallyFileCount` | numeric | Files shared externally |
+| `lastActivityDate` | date | Last SharePoint activity |
+
+**What feeds downstream:** `ms365_email_activity` and `ms365_teams_activity` → `class_communication_events` (Silver step 1). OneDrive and SharePoint tables are collected but not yet mapped to a unified stream — available for future use without re-fetching.
 
 ---
 
@@ -519,31 +657,33 @@ Aggregated counts — individual message content is not collected.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `email` | text | User email |
-| `user_id` | text | Cursor platform user ID |
+| `unique` | text | Primary key |
+| `day` | text | Day label |
 | `date` | bigint | Unix timestamp in milliseconds |
-| `is_active` | boolean | Whether user had any activity this day |
-| `chat_requests` | numeric | AI chat interactions |
-| `cmdk_usages` | numeric | Cmd+K (inline edit) usages |
-| `composer_requests` | numeric | Composer feature requests |
-| `agent_requests` | numeric | Agent mode requests |
-| `bugbot_usages` | numeric | Bug bot usages |
-| `total_tabs_shown` | numeric | Tab completion suggestions shown |
-| `total_tabs_accepted` | numeric | Tab completions accepted |
-| `total_accepts` | numeric | All AI suggestions accepted |
-| `total_applies` | numeric | Code applications (apply to file) |
-| `total_rejects` | numeric | Suggestions rejected |
-| `total_lines_added` | numeric | Total lines of code added |
-| `total_lines_deleted` | numeric | Total lines deleted |
-| `accepted_lines_added` | numeric | Lines added from accepted AI suggestions |
-| `accepted_lines_deleted` | numeric | Lines deleted from accepted AI suggestions |
-| `most_used_model` | text | Most used AI model that day, e.g. `claude-3.5-sonnet` |
-| `tab_most_used_extension` | text | File extension with most tab completions |
-| `apply_most_used_extension` | text | File extension with most applies |
-| `client_version` | text | Cursor IDE version |
-| `subscription_included_reqs` | numeric | Requests covered by subscription |
-| `usage_based_reqs` | numeric | Requests on usage-based billing |
-| `api_key_reqs` | numeric | Requests using API key |
+| `email` | text | User email |
+| `userId` | text | Cursor platform user ID |
+| `isActive` | boolean | Whether user had any activity this day |
+| `chatRequests` | numeric | AI chat interactions |
+| `cmdkUsages` | numeric | Cmd+K (inline edit) usages |
+| `composerRequests` | numeric | Composer feature requests |
+| `agentRequests` | numeric | Agent mode requests |
+| `bugbotUsages` | numeric | Bug bot usages |
+| `totalTabsShown` | numeric | Tab completion suggestions shown |
+| `totalTabsAccepted` | numeric | Tab completions accepted |
+| `totalAccepts` | numeric | All AI suggestions accepted |
+| `totalApplies` | numeric | Code applications (apply to file) |
+| `totalRejects` | numeric | Suggestions rejected |
+| `totalLinesAdded` | numeric | Total lines of code added |
+| `totalLinesDeleted` | numeric | Total lines deleted |
+| `acceptedLinesAdded` | numeric | Lines added from accepted AI suggestions |
+| `acceptedLinesDeleted` | numeric | Lines deleted from accepted AI suggestions |
+| `mostUsedModel` | text | Most used AI model that day, e.g. `claude-3.5-sonnet` |
+| `tabMostUsedExtension` | text | File extension with most tab completions |
+| `applyMostUsedExtension` | text | File extension with most applies |
+| `clientVersion` | text | Cursor IDE version |
+| `subscriptionIncludedReqs` | numeric | Requests covered by subscription |
+| `usageBasedReqs` | numeric | Requests on usage-based billing |
+| `apiKeyReqs` | numeric | Requests using API key |
 
 ---
 
@@ -551,16 +691,17 @@ Aggregated counts — individual message content is not collected.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `user_email` | text | User email |
+| `unique` | text | Primary key |
+| `userEmail` | text | User email |
 | `timestamp` | timestamptz | Event timestamp |
 | `kind` | text | Event type: `chat`, `completion`, `agent`, `cmd-k`, etc. |
 | `model` | text | AI model used, e.g. `gpt-4o`, `claude-3.5-sonnet` |
-| `max_mode` | boolean | Whether max mode was enabled |
-| `is_chargeable` | boolean | Whether event incurs billing |
-| `requests_costs` | numeric | Request cost in credits |
-| `cursor_token_fee` | numeric | Cursor platform fee |
-| `is_token_based_call` | boolean | Billed by tokens vs per-request |
-| `is_headless` | boolean | Triggered without UI (automated) |
+| `maxMode` | boolean | Whether max mode was enabled |
+| `isChargeable` | boolean | Whether event incurs billing |
+| `requestsCosts` | numeric | Request cost in credits |
+| `cursorTokenFee` | numeric | Cursor platform fee |
+| `isTokenBasedCall` | boolean | Billed by tokens vs per-request |
+| `isHeadless` | boolean | Triggered without UI (automated) |
 
 ---
 
@@ -568,13 +709,13 @@ Aggregated counts — individual message content is not collected.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `event_unique` | text | Parent event reference |
-| `input_tokens` | numeric | Tokens in the prompt |
-| `output_tokens` | numeric | Tokens in the model response |
-| `cache_read_tokens` | numeric | Tokens served from prompt cache |
-| `cache_write_tokens` | numeric | Tokens written to cache |
-| `total_cents` | numeric | Total cost in cents |
-| `discount_percent_off` | numeric | Discount applied |
+| `event_unique` | text | Parent event reference (`cursor_events.unique`) |
+| `inputTokens` | numeric | Tokens in the prompt |
+| `outputTokens` | numeric | Tokens in the model response |
+| `cacheReadTokens` | numeric | Tokens served from prompt cache |
+| `cacheWriteTokens` | numeric | Tokens written to cache |
+| `totalCents` | numeric | Total cost in cents |
+| `discountPercentOff` | numeric | Discount applied |
 
 All fields nullable — not all events have token-level detail.
 
@@ -632,7 +773,7 @@ Token fields are nullable — not all events have token-level detail.
 
 ## Unified Stream 1: `class_communication_events`
 
-**Sources:** `m365_raw` (Email + Teams fields) + `zulip_messages`
+**Sources:** `ms365_email_activity` + `ms365_teams_activity` + `zulip_messages`
 
 One row per user per day per channel type. OneDrive and SharePoint fields from `m365_raw` are not included — the stream covers only communication activity.
 
@@ -643,31 +784,31 @@ One row per user per day per channel type. OneDrive and SharePoint fields from `
 | Field | Type | Description |
 |-------|------|-------------|
 | `ingestion_date` | timestamp | When ingested — cursor for incremental downstream sync |
-| `source_id` | text | Composite key tracing to source record: `{source}:{id}:{channel}` |
+| `source_id` | text | Composite key tracing to source record: `{source}:{id}:{channel}` for MS365; `{source}:{id}` for Zulip (no channel part — one Zulip record maps to one channel) |
 | `event_date` | date | Date the communication occurred |
 | `source` | text | `ms365_teams`, `ms365_email`, `zulip` |
 | `user_email` | text | Lowercase email — populated in step 1, retained for traceability |
 | `person_id` | text | Canonical person_id from Identity Manager — populated in step 2 (NULL until resolved) |
 | `user_display_name` | text | Display name (where available) |
 | `channel` | text | Communication channel type |
-| `direction` | text | `outbound`, `inbound`, `engagement` |
+| `direction` | text | `outbound`, `inbound`, `engagement`, `NULL` (direction not applicable) |
 | `count` | numeric | Number of events |
 | `metadata` | jsonb | Source-specific extras (durations, urgentMessages, etc.) |
 
 **Channel mapping:**
 
-| source | channel | direction | Source field |
-|--------|---------|-----------|-------------|
-| `ms365_teams` | `chat_group` | outbound | `teams_chat_group_count` |
-| `ms365_teams` | `chat_private` | outbound | `teams_chat_private_count` |
-| `ms365_teams` | `channel_post` | outbound | `teams_channel_post_count` |
-| `ms365_teams` | `channel_reply` | outbound | `teams_channel_reply_count` |
-| `ms365_teams` | `call` | outbound | `teams_call_count` |
-| `ms365_teams` | `meeting` | engagement | `teams_meetings_attended` |
-| `ms365_email` | `email_sent` | outbound | `email_send_count` |
-| `ms365_email` | `email_received` | inbound | `email_receive_count` |
-| `ms365_email` | `email_read` | engagement | `email_read_count` |
-| `zulip` | `chat` | outbound | `zulip_messages.count` |
+| source | channel | direction | Source table | Source field |
+|--------|---------|-----------|--------------|--------------|
+| `ms365_teams` | `chat_group` | outbound | `ms365_teams_activity` | `teamChatMessageCount` |
+| `ms365_teams` | `chat_private` | outbound | `ms365_teams_activity` | `privateChatMessageCount` |
+| `ms365_teams` | `channel_post` | outbound | `ms365_teams_activity` | `postMessages` |
+| `ms365_teams` | `channel_reply` | outbound | `ms365_teams_activity` | `replyMessages` |
+| `ms365_teams` | `call` | outbound | `ms365_teams_activity` | `callCount` |
+| `ms365_teams` | `meeting` | engagement | `ms365_teams_activity` | `meetingsAttendedCount` |
+| `ms365_email` | `email_sent` | outbound | `ms365_email_activity` | `sendCount` |
+| `ms365_email` | `email_received` | inbound | `ms365_email_activity` | `receiveCount` |
+| `ms365_email` | `email_read` | engagement | `ms365_email_activity` | `readCount` |
+| `zulip` | `chat` | outbound | `zulip_messages` | `count` |
 
 > Total chat messages across platforms: `channel IN ('chat_group', 'chat_private', 'chat') AND direction = 'outbound'`. Channel posts/replies are content publishing, not messaging — exclude from message counts.
 
@@ -791,7 +932,7 @@ Gold does not store raw events — only computed metrics. Requires per-`source_i
 ```yaml
 source_instance_id: jira-acme-prod
 status_categories:
-  in_progress: ["In Progress", "In Development", "В работе"]
+  in_progress: ["In Progress", "In Development"]
   testing:     ["In Review", "To Verify", "QA"]
   done:        ["Done", "Closed", "Resolved"]
 sprint_field:       "sprint"         # key in fields_map
@@ -1499,7 +1640,7 @@ No `cost_cents` — flat subscription.
 | **GitLab** | same structure with `gitlab_` prefix + `gitlab_num_stat`, `gitlab_files`, `gitlab_mr_approvals` | Merge Requests; effective-dated file stats; approval model |
 | **YouTrack** | `youtrack_issue`, `youtrack_issue_history`, `youtrack_user` | Full field change history; `source_instance_id` in issue table |
 | **Jira** | `jira_issue`, `jira_issue_history`, `jira_user` | Same model as YouTrack; changelog has explicit from/to values; `source_instance_id` in issue table |
-| **M365** | `m365_raw` (one wide table) | 5 API endpoints joined by `user_principal_name + report_refresh_date`; incl. M365 Copilot (`cop_` prefix) |
+| **M365** | `ms365_email_activity`, `ms365_teams_activity`, `ms365_onedrive_activity`, `ms365_sharepoint_activity` | 4 separate endpoint tables; camelCase field names; M365 Copilot not yet collected |
 | **Zulip** | `zulip_messages`, `zulip_users` | Aggregated counts, no message content |
 | **Cursor** | `cursor_daily_usage`, `cursor_events`, `cursor_events_token_usage` | Daily aggregates + per-event detail |
 | **Windsurf** | `windsurf_daily_usage`, `windsurf_events` | Same model as Cursor; token usage inline in events table |
@@ -1553,6 +1694,82 @@ When Identity Manager merges two previously separate `person_id` values (or spli
 - Should `class_ai_api_usage` carry a nullable `person_id` (resolved only when the header is present)?
 - Or is per-key usage tracked separately from per-person IDE tool usage (`class_ai_dev_usage`), with no attempt to unify them at Silver?
 - How does cost attribution work when one API key is shared across a team?
+
+### OQ-4: Zulip Bronze schema — extra fields in stream spec
+
+`streams/raw_zulip/zulip_users.md` (PR #3) contains a `recipient_id` (bigint) field not described in this Reference. `streams/raw_zulip/zulip_messages.md` contains a `uniq` (text, PRIMARY KEY) field also absent here.
+
+- Are these fields present in the actual connector output and should be added to the Reference?
+- Or are they implementation artifacts that should be removed from the stream spec?
+
+### OQ-5: YouTrack Bronze schema — `source_instance_id` presence
+
+This Reference lists `source_instance_id` as the first field in both `youtrack_issue` and `youtrack_issue_history` (required for multi-instance support). However, `streams/raw_youtrack/youtrack_issue.md` and `streams/raw_youtrack/youtrack_issue_history.md` (PR #3) do not include this field.
+
+- Is `source_instance_id` populated by the current connector or only planned?
+- If not yet implemented, should it be added to the stream spec before production use?
+
+### OQ-6: `class_task_tracker_activities` — author/assignee field types
+
+This Reference defines `event_author_raw` (UInt64) and `assignee_raw` (UInt64 NULL) — numeric source-system IDs resolved to `person_id` in Silver step 2. `streams/stream_task_tracker/task_tracker_activities.md` (PR #3) instead uses `event_author` (text) and `assignee` (text) — human-readable names stored directly.
+
+- Which representation is canonical for Silver step 1: numeric IDs (requiring a lookup step) or text names (denormalized, no lookup needed)?
+- The numeric ID approach requires ClickHouse Dictionaries (`status_dict`, `type_dict`) — is that infrastructure confirmed?
+
+### OQ-7: Silver table naming convention — `class_` vs `_enriched`
+
+This Reference uses `class_{domain}` naming for Silver tables (e.g. `class_commits`, `class_task_tracker`, `class_communication_events`). `IDENTITY_RESOLUTION_V3.md` (PR #2) uses `{entity}_enriched` (e.g. `commits_enriched`, `tasks_enriched`).
+
+- Which naming convention is adopted going forward?
+- All downstream references (Gold queries, identity resolution jobs) must use a single consistent scheme.
+
+### OQ-8: Git Bronze schema — per-source tables vs unified table with `data_source`; extra tables
+
+This Reference defines separate Bronze tables per source: `github_commits`, `bitbucket_commits`, `gitlab_commits`, etc. `connectors/git/schema.dbml` and `connectors/git/tables/*.md` (PR #1) define a single unified table per entity — `git_commits`, `git_pull_requests`, etc. — with a `data_source` field (`"insight_github"` / `"insight_bitbucket_server"` / `"insight_gitlab"`) as discriminator. Both use ClickHouse / ReplacingMergeTree.
+
+- Which approach is canonical: per-source tables (this Reference) or unified table + `data_source` (PR #1)?
+- Per-source tables make source-specific fields explicit but require UNION for cross-source queries. Unified table simplifies queries but mixes source-specific nullable fields.
+- All downstream Silver jobs and this Reference must align on one approach.
+
+Additionally, `schema.dbml` (PR #1) contains two entities absent from this Reference:
+- `git_pr_participants` — Bitbucket-specific table listing all PR participants (authors, reviewers, commenters); no GitHub equivalent
+- `git_prs_with_metadata` — materialized view / derived table joining PRs with metadata
+
+Should these be documented in this Reference, and if so, under which source(s)?
+
+### OQ-9: Git streams layer (`streams/raw_git/`) — relationship to Bronze
+
+`streams/raw_git/*.md` (PR #3) defines a PostgreSQL schema (`git.commit`, `git.author`, `git.repo`, `git.num_stat`, `git.file`, `git.loc`, `git.branch`) with auto-increment IDs and FK relationships. This is structurally incompatible with both schema.dbml (ClickHouse) and this Reference.
+
+- Is this a separate intermediate layer between the connector and Bronze, or a legacy/GitLab-only design?
+- If intermediate: this layer is undocumented in the overall pipeline diagram and needs to be added.
+- If legacy: these files should be marked as superseded or removed to avoid confusion.
+
+### OQ-11: Pipeline architecture model — Medallion (Bronze/Silver/Gold) vs dbt-Mart
+
+`CONNECTORS_ARCHITECTURE.md` (PR #2) and this Reference describe fundamentally different architectural models. Specific conflicts:
+
+| Aspect | This Reference | CONNECTORS_ARCHITECTURE.md (PR #2) |
+|--------|---------------|-------------------------------------|
+| Bronze naming | `{source}_{entity}` — e.g. `github_commits`, `youtrack_issue_history` | `raw_{source}_{entity}` — e.g. `raw_gitlab_commits`, `raw_youtrack_issues` |
+| Pipeline stages | Bronze → Silver (`class_*`) → Gold | Raw Tables → dbt (Staging → Intermediate → Mart) → Materialized Views |
+| Gold layer | `status_periods`, `throughput`, `wip_snapshots` | `mart_dev_activity`, `mart_task_flow`, `mart_communication`, `mart_people` |
+| Identity Resolution | Identity Manager in PostgreSQL / MariaDB | Stored in ClickHouse Dictionaries |
+| Unifier Layer | Not mentioned | Explicit layer between connectors and storage — YAML schemas with semantic metadata propagating to Semantic Dictionary |
+| Orchestration | Not mentioned | AirByte / Dagster |
+| Additional sources | Not described | Linear (task tracking), Slack (communication), MCP / AI Assistant (ai_tools) |
+
+- Which model is adopted for implementation?
+- If Medallion: `CONNECTORS_ARCHITECTURE.md` needs to be updated — remove `raw_` prefixes, replace mart layer with Gold naming.
+- If dbt-Mart: this Reference needs a full revision — rename tables, add Unifier Layer, move Identity Resolution to ClickHouse Dictionaries.
+- Are Linear, Slack, and MCP planned sources or already implemented? If planned, add to this Reference.
+
+### OQ-10: Git PR/commit field naming — `owner`/`repo_name` vs `project_key`/`repo_slug`
+
+This Reference uses `owner` + `repo_name` for GitHub-style namespace fields. `connectors/git/tables/*.md` (PR #1) uses `project_key` + `repo_slug` as a unified cross-source naming. Additional mismatches: `ticket_refs` (Reference) vs `jira_tickets` (PR #1); `author_login`, `merged_by_login`, `draft`, `review_comment_count` present in Reference but absent in PR #1 tables.
+
+- Which field names are canonical for the unified Bronze schema?
+- GitHub-specific fields (`draft`, `merged_by_login`, `review_comment_count`) — are they stored as NULL for Bitbucket/GitLab rows, or excluded?
 
 ---
 
