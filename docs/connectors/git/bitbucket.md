@@ -4,11 +4,11 @@
 
 > Version 1.0 — March 2026> Version 1.0 — March 2026
 
-> Based on: Unified git data model (`docs/connectors/git.md`)> Based on: `docs/CONNECTORS_REFERENCE.md` Source 2 (Bitbucket)
+> Based on: Unified git data model (`docs/connectors/git/README.md`)> Based on: `docs/CONNECTORS_REFERENCE.md` Source 2 (Bitbucket)
 
 
 
-Standalone specification for the Bitbucket Server/Data Center (Version Control) connector. Uses the unified `git_*` tables defined in `docs/connectors/git.md` with `data_source = "insight_bitbucket_server"`.Standalone specification for the Bitbucket (Version Control) connector. Expands Source 2 in the main Connector Reference with full table schemas, identity mapping, Silver/Gold pipeline notes, and open questions.
+Standalone specification for the Bitbucket Server/Data Center (Version Control) connector. Uses the unified `git_*` tables defined in `docs/connectors/git/README.md` with `data_source = "insight_bitbucket_server"`.Standalone specification for the Bitbucket (Version Control) connector. Expands Source 2 in the main Connector Reference with full table schemas, identity mapping, Silver/Gold pipeline notes, and open questions.
 
 
 
@@ -102,7 +102,7 @@ Standalone specification for the Bitbucket Server/Data Center (Version Control) 
 
 | PR review model | Formal reviews with `state` (`APPROVED` / `CHANGES_REQUESTED` / etc.) | Simple reviewer list with `status` (`APPROVED` / `UNAPPROVED` / `NEEDS_WORK`) |
 
-**Why unified schema**: Bitbucket data is stored in the same `git_*` tables as GitHub and GitLab (defined in `docs/connectors/git.md`), using `data_source = "insight_bitbucket_server"` as the discriminator. This enables:| Comment severity | — | `severity`: `NORMAL` / `BLOCKER` (blocking comments must be resolved before merge) |
+**Why unified schema**: Bitbucket data is stored in the same `git_*` tables as GitHub and GitLab (defined in `docs/connectors/git/README.md`), using `data_source = "insight_bitbucket_server"` as the discriminator. This enables:| Comment severity | — | `severity`: `NORMAL` / `BLOCKER` (blocking comments must be resolved before merge) |
 
 - Cross-platform analytics (e.g., "show all commits across GitHub and Bitbucket")| PR state values | `open` / `closed` / `merged` | `OPEN` / `MERGED` / `DECLINED` |
 
@@ -130,7 +130,7 @@ Standalone specification for the Bitbucket Server/Data Center (Version Control) 
 
 |-------|------|-------------|
 
-Bitbucket data is stored in the following unified tables from `docs/connectors/git.md`:| `workspace` | String | Bitbucket workspace slug (replaces `owner`) |
+Bitbucket data is stored in the following unified tables from `docs/connectors/git/README.md`:| `workspace` | String | Bitbucket workspace slug (replaces `owner`) |
 
 | `repo_name` | String | Repository slug |
 
@@ -166,7 +166,7 @@ Bitbucket data is stored in the following unified tables from `docs/connectors/g
 
 
 
-**Reference**: See `docs/connectors/git.md` for complete table schemas, indexes, and field descriptions.| Field | Type | Description |
+**Reference**: See `docs/connectors/git/README.md` for complete table schemas, indexes, and field descriptions.| Field | Type | Description |
 
 |-------|------|-------------|
 

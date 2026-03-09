@@ -1,9 +1,9 @@
 # GitHub Connector Specification
 
 > Version 1.0 — March 2026
-> Based on: Unified git data model (`docs/connectors/git.md`)
+> Based on: Unified git data model (`docs/connectors/git/README.md`)
 
-Standalone specification for the GitHub (Version Control) connector. Uses the unified `git_*` tables defined in `docs/connectors/git.md` with `data_source = "insight_github"`.
+Standalone specification for the GitHub (Version Control) connector. Uses the unified `git_*` tables defined in `docs/connectors/git/README.md` with `data_source = "insight_github"`.
 
 <!-- toc -->
 
@@ -54,7 +54,7 @@ Standalone specification for the GitHub (Version Control) connector. Uses the un
 
 **Field naming**: GitHub uses camelCase in API responses (e.g., `createdAt`, `mergeCommit`) which are mapped to snake_case in the unified schema (`created_on`, `merge_commit_hash`).
 
-**Why unified schema**: GitHub data is stored in the same `git_*` tables as Bitbucket and GitLab (defined in `docs/connectors/git.md`), using `data_source = "insight_github"` as the discriminator. This enables:
+**Why unified schema**: GitHub data is stored in the same `git_*` tables as Bitbucket and GitLab (defined in `docs/connectors/git/README.md`), using `data_source = "insight_github"` as the discriminator. This enables:
 - Cross-platform analytics (e.g., "show all commits across GitHub and Bitbucket")
 - Consistent identity resolution across git platforms
 - Simplified Silver/Gold layer transformations
@@ -74,7 +74,7 @@ Standalone specification for the GitHub (Version Control) connector. Uses the un
 
 ### Unified Git Tables
 
-GitHub data is stored in the following unified tables from `docs/connectors/git.md`:
+GitHub data is stored in the following unified tables from `docs/connectors/git/README.md`:
 
 | Table | Purpose | GitHub Usage |
 |-------|---------|--------------|
@@ -92,7 +92,7 @@ GitHub data is stored in the following unified tables from `docs/connectors/git.
 | `git_tickets` | Ticket references (Jira, etc.) | Extracts ticket keys from PR titles/descriptions and commit messages |
 | `git_collection_runs` | Connector execution log | Tracks ETL run statistics and status |
 
-**Reference**: See `docs/connectors/git.md` for complete table schemas, indexes, and field descriptions.
+**Reference**: See `docs/connectors/git/README.md` for complete table schemas, indexes, and field descriptions.
 
 **Key mapping differences**:
 - GitHub's `owner` + `repo_name` → `git_repositories.project_key` + `git_repositories.repo_slug`

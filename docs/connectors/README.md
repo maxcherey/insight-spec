@@ -28,16 +28,17 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 
 | # | Source | Spec | Status |
 |---|--------|------|--------|
-| 1 | GitHub | [`github.md`](github.md) | ✓ Done |
-| 2 | Bitbucket | [`bitbucket.md`](bitbucket.md) | ✓ Done |
-| 3 | GitLab | [`gitlab.md`](gitlab.md) | ✓ Done |
+| — | Git (unified schema) | [`git/README.md`](git/README.md) | ✓ Done |
+| 1 | GitHub | [`git/github.md`](git/github.md) | ✓ Done |
+| 2 | Bitbucket | [`git/bitbucket.md`](git/bitbucket.md) | ✓ Done |
+| 3 | GitLab | [`git/gitlab.md`](git/gitlab.md) | ✓ Done |
 
 ### Task Tracking
 
 | # | Source | Spec | Status |
 |---|--------|------|--------|
-| 4 | YouTrack | [`youtrack.md`](youtrack.md) | ✓ Done |
-| 5 | Jira | [`jira.md`](jira.md) | ✓ Done |
+| 4 | YouTrack | [`task-tracking/youtrack.md`](task-tracking/youtrack.md) | ✓ Done |
+| 5 | Jira | [`task-tracking/jira.md`](task-tracking/jira.md) | ✓ Done |
 
 ### Communication
 
@@ -50,33 +51,33 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 
 | # | Source | Spec | Status |
 |---|--------|------|--------|
-| 8 | Cursor | [`cursor.md`](cursor.md) | ✓ Done |
-| 9 | Windsurf | [`windsurf.md`](windsurf.md) | ✓ Done |
-| 15 | GitHub Copilot | [`github-copilot.md`](github-copilot.md) | ✓ Done |
+| 8 | Cursor | [`ai-dev/cursor.md`](ai-dev/cursor.md) | ✓ Done |
+| 9 | Windsurf | [`ai-dev/windsurf.md`](ai-dev/windsurf.md) | ✓ Done |
+| 15 | GitHub Copilot | [`ai-dev/github-copilot.md`](ai-dev/github-copilot.md) | ✓ Done |
 
 ### AI Tools
 
 | # | Source | Spec | Status |
 |---|--------|------|--------|
-| 13 | Claude API | [`claude-api.md`](claude-api.md) | ✓ Done |
-| 14 | Claude Team Plan | [`claude-team.md`](claude-team.md) | ✓ Done |
-| 18 | OpenAI API | [`openai-api.md`](openai-api.md) | ✓ Done |
-| 19 | ChatGPT Team | [`chatgpt-team.md`](chatgpt-team.md) | ✓ Done |
+| 13 | Claude API | [`ai/claude-api.md`](ai/claude-api.md) | ✓ Done |
+| 14 | Claude Team Plan | [`ai/claude-team.md`](ai/claude-team.md) | ✓ Done |
+| 18 | OpenAI API | [`ai/openai-api.md`](ai/openai-api.md) | ✓ Done |
+| 19 | ChatGPT Team | [`ai/chatgpt-team.md`](ai/chatgpt-team.md) | ✓ Done |
 
 ### HR / Directory
 
 | # | Source | Spec | Status |
 |---|--------|------|--------|
-| 10 | BambooHR | [`bamboohr.md`](bamboohr.md) | ✓ Done |
-| 11 | Workday | [`workday.md`](workday.md) | ✓ Done |
-| 12 | LDAP / Active Directory | [`ldap.md`](ldap.md) | ✓ Done |
+| 10 | BambooHR | [`hr-directory/bamboohr.md`](hr-directory/bamboohr.md) | ✓ Done |
+| 11 | Workday | [`hr-directory/workday.md`](hr-directory/workday.md) | ✓ Done |
+| 12 | LDAP / Active Directory | [`hr-directory/ldap.md`](hr-directory/ldap.md) | ✓ Done |
 
 ### CRM
 
 | # | Source | Spec | Status |
 |---|--------|------|--------|
-| 16 | HubSpot | [`hubspot.md`](hubspot.md) | ✓ Done |
-| 17 | Salesforce | [`salesforce.md`](salesforce.md) | ✓ Done |
+| 16 | HubSpot | [`crm/hubspot.md`](crm/hubspot.md) | ✓ Done |
+| 17 | Salesforce | [`crm/salesforce.md`](crm/salesforce.md) | ✓ Done |
 
 ### Quality / Testing
 
