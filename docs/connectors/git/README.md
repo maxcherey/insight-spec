@@ -735,7 +735,7 @@ WHERE ext.property_key = 'hotfix_flag'
 
 ## Silver / Gold Mappings
 
-| Silver table | Gold target | Status |
+| Silver table | Silver target | Status |
 |-------------|--------------|--------|
 | `git_repositories` | *(reference table)* | No unified stream — used for filtering and metadata |
 | `git_repositories_ext` | *(aggregated metrics)* | Used for repository analytics dashboards and health scoring |
