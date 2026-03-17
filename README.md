@@ -162,3 +162,56 @@ This repo uses [Cypilot](https://github.com/cyberfabric/cyber-pilot) — an AI a
 - **Add a connector** — Follow the layout in any existing `docs/connectors/{domain}/{source}/` directory. Use `specs/PRD.md` for requirements and `specs/DESIGN.md` for table schemas and pipeline mappings.
 - **Cypilot** — Run `cypilot on` in a supported AI agent to activate assisted spec authoring, validation, and traceability. Cypilot is sourced from [github.com/cyberfabric/cyber-pilot](https://github.com/cyberfabric/cyber-pilot).
 - **Inbox** — Documents in `inbox/` are drafts awaiting review. Do not reference them as canonical sources.
+
+---
+
+## Working with `docs/`
+
+The `docs/` folder is the single source of truth for all product and connector specifications. Every document here is considered canonical and must go through a review process before being merged.
+
+### Document types
+
+Each component or connector has a `specs/` subdirectory with three document types:
+
+| File | Purpose | Who writes it |
+|------|---------|---------------|
+| `specs/PRD.md` | Business and product requirements — actors, use cases, functional requirements, NFRs. **Code-agnostic**: no schemas, no implementation details. | Product / domain owners |
+| `specs/DESIGN.md` | Technical design — Bronze table schemas, identity resolution mechanics, Silver/Gold pipeline mappings, data flow. | Engineering |
+| `specs/ADR/` | Architecture Decision Records — individual decisions that affect the design. | Engineering |
+
+### Contribution workflow
+
+#### Adding or updating requirements (PRD)
+
+Business requirements, use cases, actor definitions, and functional/non-functional requirements belong in `specs/PRD.md` of the relevant component or connector.
+
+1. Create a branch.
+2. Edit `specs/PRD.md` — add or update requirements. Keep it code-agnostic: describe **what** the system must do, not how.
+3. Open a PR for review. Once approved, merge.
+
+#### Updating the technical design (DESIGN)
+
+`specs/DESIGN.md` is the authoritative technical specification for a component. It must reflect the current agreed-upon design at all times.
+
+**Do not edit `DESIGN.md` directly to propose a change.** Instead:
+
+1. Create a new ADR in `specs/ADR/` describing the proposed change (context, options considered, decision, consequences).
+2. Open a PR with the ADR only.
+3. Once the ADR is approved and merged, update `specs/DESIGN.md` in a follow-up commit or PR to reflect the accepted decision.
+
+This ensures every significant design change has a traceable decision record before the canonical design document is updated.
+
+#### ADR naming convention
+
+```
+specs/ADR/ADR-NNN-short-description.md
+```
+
+Example: `specs/ADR/ADR-001-use-email-as-identity-key.md`
+
+### Summary
+
+```
+Propose requirement change  →  edit PRD.md  →  PR  →  merge
+Propose design change       →  new ADR      →  PR  →  merge  →  update DESIGN.md
+```
