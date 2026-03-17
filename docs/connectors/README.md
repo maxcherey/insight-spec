@@ -133,6 +133,9 @@ Per-source deep-dive specifications for Constructor Insight connectors. Each fil
 | Task Tracker unified schema | YouTrack + Jira | [`task-tracking/README.md`](task-tracking/README.md) |
 | `class_people` + `class_org_units` | BambooHR + Workday + LDAP | [`hr-directory/README.md`](hr-directory/README.md) |
 | `class_ai_dev_usage` | Cursor + Windsurf + Copilot + JetBrains + Claude Code | [`ai-dev/`](ai-dev/) |
+| `class_communication_metrics` | M365 (Email + Teams) + Zulip | [`collaboration/README.md`](collaboration/README.md) |
+| `class_document_metrics` | M365 (OneDrive + SharePoint) | [`collaboration/README.md`](collaboration/README.md) — planned |
+| Task Tracker unified schema | YouTrack + Jira | [`task-tracking/README.md`](task-tracking/README.md) |
 
 ---
 
