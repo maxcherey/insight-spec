@@ -102,35 +102,40 @@ Canonical product and connector specifications.
 docs/
 ├── CONNECTORS_REFERENCE.md       ← master Bronze schema reference for all sources
 │
-├── connectors/                   ← per-source connector specifications
-│   ├── README.md                 ← connector index + unified streams table
-│   ├── git/                      ← GitHub, Bitbucket Server, GitLab
-│   ├── task-tracking/            ← YouTrack, Jira
-│   ├── collaboration/            ← Microsoft 365, Slack, Zoom, Zulip
-│   ├── wiki/                     ← Confluence, Outline
-│   ├── support/                  ← Zendesk, Jira Service Management
-│   ├── ai-dev/                   ← Cursor, Windsurf, GitHub Copilot, JetBrains
-│   ├── ai/                       ← Claude API, Claude Team, OpenAI API, ChatGPT Team
-│   ├── hr-directory/             ← BambooHR, Workday, LDAP / Active Directory
-│   ├── crm/                      ← HubSpot, Salesforce
-│   ├── ui-design/                ← Figma
-│   └── testing/                  ← Allure TestOps
+├── components/                   ← per-component specifications
+│   ├── connectors/               ← per-source connector specifications
+│   │   ├── README.md             ← connector index + unified streams table
+│   │   ├── git/                  ← GitHub, Bitbucket Server, GitLab
+│   │   ├── task-tracking/        ← YouTrack, Jira
+│   │   ├── collaboration/        ← Microsoft 365, Slack, Zoom, Zulip
+│   │   ├── wiki/                 ← Confluence, Outline
+│   │   ├── support/              ← Zendesk, Jira Service Management
+│   │   ├── ai-dev/               ← Cursor, Windsurf, GitHub Copilot, JetBrains
+│   │   ├── ai/                   ← Claude API, Claude Team, OpenAI API, ChatGPT Team
+│   │   ├── hr-directory/         ← BambooHR, Workday, LDAP / Active Directory
+│   │   ├── crm/                  ← HubSpot, Salesforce
+│   │   ├── ui-design/            ← Figma
+│   │   └── testing/              ← Allure TestOps
+│   │
+│   │   Each connector source follows this layout:
+│   │     {source}/
+│   │       specs/
+│   │         PRD.md              ← requirements (actors, FRs, NFRs — code-agnostic)
+│   │         DESIGN.md           ← technical design (schemas, mappings, mechanics)
+│   │         ADR/                ← architecture decisions
+│   │
+│   ├── connectors_orchestrator/  ← connector orchestration layer specs
+│   │   └── specs/ (PRD, DESIGN, ADR)
+│   │
+│   ├── backend/                  ← REST API server: auth, authorization, user management, data proxy
+│   │   └── specs/ (PRD, DESIGN, ADR)
+│   │
+│   └── frontend/                 ← SPA: analytics dashboards, git activity, AI adoption, PR metrics
+│       └── specs/ (PRD, DESIGN, ADR)
 │
-│   Each connector source follows this layout:
-│     {source}/
-│       specs/
-│         PRD.md                  ← requirements (actors, FRs, NFRs — code-agnostic)
-│         DESIGN.md               ← technical design (schemas, mappings, mechanics)
-│         ADR/                    ← architecture decisions
+├── domain/                       ← domain model and cross-cutting concepts
 │
-├── connectors_orchestration/     ← connector orchestration layer specs
-│   └── specs/ (PRD, DESIGN, ADR)
-│
-├── backend/                      ← REST API server: auth, authorization, user management, data proxy
-│   └── specs/ (PRD, DESIGN, ADR)
-│
-└── frontend/                     ← SPA: analytics dashboards, git activity, AI adoption, PR metrics
-    └── specs/ (PRD, DESIGN, ADR)
+└── shared/                       ← shared definitions (identity, permissions, data model)
 ```
 
 ### `inbox/`
@@ -141,9 +146,9 @@ Incoming documents pending triage and integration into `docs/`. Not yet canonica
 |--------|--------|----------------------|
 | `architecture/` | Draft | Various — identity resolution, permissions, product spec |
 | `airbyte-declarative-standalone/` | Prototype | Connector implementation reference |
-| `stats/backend/` | Draft ADRs | `docs/backend/specs/ADR/` |
-| `stats/frontend/` | Draft | `docs/frontend/specs/` |
-| `streams/` | Draft schemas | `docs/connectors/` — per-source stream definitions |
+| `stats/backend/` | Draft ADRs | `docs/components/backend/specs/ADR/` |
+| `stats/frontend/` | Draft | `docs/components/frontend/specs/` |
+| `streams/` | Draft schemas | `docs/components/connectors/` — per-source stream definitions |
 
 ### `cypilot/`
 
@@ -181,8 +186,8 @@ This repo uses [Cypilot](https://github.com/cyberfabric/cyber-pilot) — an AI a
 
 ## Working with This Repo
 
-- **Browse specs** — Start at [`docs/connectors/README.md`](docs/connectors/README.md) for the connector index, or [`docs/CONNECTORS_REFERENCE.md`](docs/CONNECTORS_REFERENCE.md) for the master Bronze schema reference.
-- **Add a connector** — Follow the layout in any existing `docs/connectors/{domain}/{source}/` directory. Use `specs/PRD.md` for requirements and `specs/DESIGN.md` for table schemas and pipeline mappings.
+- **Browse specs** — Start at [`docs/components/connectors/README.md`](docs/components/connectors/README.md) for the connector index, or [`docs/CONNECTORS_REFERENCE.md`](docs/CONNECTORS_REFERENCE.md) for the master Bronze schema reference.
+- **Add a connector** — Follow the layout in any existing `docs/components/connectors/{domain}/{source}/` directory. Use `specs/PRD.md` for requirements and `specs/DESIGN.md` for table schemas and pipeline mappings.
 - **Cypilot** — Run `cypilot on` in a supported AI agent to activate assisted spec authoring, validation, and traceability. Cypilot is sourced from [github.com/cyberfabric/cyber-pilot](https://github.com/cyberfabric/cyber-pilot).
 - **Inbox** — Documents in `inbox/` are drafts awaiting review. Do not reference them as canonical sources.
 
