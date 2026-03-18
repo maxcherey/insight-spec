@@ -63,12 +63,12 @@ A growing need has also emerged for per-file third-party code detection: identif
 
 ### 1.3 Goals (Business Outcomes)
 
-- Collect all repositories, branches, commits, pull requests, reviewer actions, and comments from GitHub organizations.
+- Collect all repositories, branches, commits, pull requests, reviewer actions, and comments from GitHub organizations. **Target**: complete initial collection of an organization with up to 500 repositories within 8 hours under standard GitHub rate limit conditions.
 - Store collected data in the unified `git_*` Silver tables using `data_source = "insight_github"` as the discriminator, enabling cross-platform queries alongside Bitbucket and GitLab data.
-- Support incremental collection so that repeated runs only fetch data changed since the last successful run.
-- Resolve GitHub user identities (email, username) to canonical `person_id` via the Identity Manager, enabling cross-platform person analytics.
+- Support incremental collection so that repeated runs only fetch data changed since the last successful run. **Target**: incremental runs for repositories with fewer than 10,000 commits per branch complete within 15 minutes under normal rate limit conditions.
+- Resolve GitHub user identities (email, username) to canonical `person_id` via the Identity Manager, enabling cross-platform person analytics. **Target**: ≥ 95% `person_id` match rate for commits where a non-masked email address is present.
 - Enable external enrichment pipelines (AI detection, license scanning) to attach per-file analysis results to collected commit files without modifying the core collection schema.
-- Tolerate API errors, deleted resources, rate limiting, and temporary outages without losing collection progress.
+- Tolerate API errors, deleted resources, rate limiting, and temporary outages without losing collection progress. **Target**: a collection run that encounters non-fatal errors on up to 5% of repositories MUST still complete and record a `completed_with_errors` status rather than halting.
 
 ### 1.4 Glossary
 
@@ -86,6 +86,7 @@ A growing need has also emerged for per-file third-party code detection: identif
 | License scanning | Automated analysis to identify third-party licenses and copyright notices within a file |
 | Incremental sync | Collection mode where only new or updated records are fetched, based on cursor state |
 | PAT | Personal Access Token — one of the supported authentication methods |
+| OAuth Token | OAuth app token issued by GitHub — functionally equivalent to a PAT for read-only API access; used when the organization enforces OAuth app authorization policies |
 | GraphQL | GitHub's API v4 query language, providing efficient bulk data access |
 
 ---
@@ -198,6 +199,8 @@ A growing need has also emerged for per-file third-party code detection: identif
 - Gold-layer transformations (owned by analytics pipeline, not this connector).
 - Execution of AI detection or license scanning (owned by dedicated enrichment pipelines).
 - GitHub Enterprise Server with non-standard API endpoints (standard GitHub.com API only in this version).
+- Commit-level enrichment properties (`git_commits_ext`) — populated by external AI/analysis pipelines independently of this connector, using the same EAV pattern as file-level enrichment.
+- PR-level extended analytics properties (`git_pull_requests_ext`) — cycle time and review metric calculations are owned by the Gold-layer analytics pipeline, not this connector.
 
 ---
 
@@ -215,6 +218,16 @@ The connector MUST enumerate all accessible repositories within configured GitHu
 
 **Actors**: `cpt-insightspec-actor-gh-platform-engineer`, `cpt-insightspec-actor-gh-api`
 
+#### Collect Repository Extension Properties
+
+- [ ] `p2` - **ID**: `cpt-insightspec-fr-gh-collect-repo-ext`
+
+The connector SHOULD collect GitHub-specific repository metrics (stars count, forks count, watchers count, open issues count, fork status, archive status, default branch name) and store them in the unified repository extension table alongside the core repository record.
+
+**Rationale**: GitHub provides richer repository metadata than other git platforms. Storing these metrics in the extension table enables analytics on repository health, popularity, and activity without modifying the unified core schema shared across platforms.
+
+**Actors**: `cpt-insightspec-actor-gh-analytics-eng`
+
 #### Discover Branches
 
 - [ ] `p1` - **ID**: `cpt-insightspec-fr-gh-discover-branches`
@@ -229,7 +242,7 @@ The connector MUST enumerate all branches per repository and track branch state 
 
 - [ ] `p1` - **ID**: `cpt-insightspec-fr-gh-collect-commits`
 
-The connector MUST collect the full commit history for each branch, including author name, author email, author GitHub login, committer name, committer email, commit message, timestamp, and parent commit references.
+The connector MUST collect the full commit history for each branch, including author name, author email, author GitHub login, committer name, committer email, commit message, timestamp, and parent commit references. When a commit appears in more than one branch, the connector MUST store it once, attributed to the first branch in which it was encountered, to prevent duplicate contribution metrics.
 
 **Rationale**: Commit history is the primary signal for contributor activity analytics.
 
@@ -239,7 +252,7 @@ The connector MUST collect the full commit history for each branch, including au
 
 - [ ] `p1` - **ID**: `cpt-insightspec-fr-gh-collect-commit-files`
 
-The connector MUST collect per-file line change statistics (file path, file extension, lines added, lines removed) for each commit and store them in the unified commit files table.
+The connector MUST collect per-file line change statistics (file path, file extension, change type: added/modified/removed/renamed, lines added, lines removed) for each commit and store them in the unified commit files table.
 
 **Rationale**: File-level data enables code churn analysis, language breakdown, and hotspot detection. It also provides the anchor records that downstream enrichment pipelines target.
 
@@ -383,6 +396,16 @@ The connector MUST stop fetching commits for a branch when it encounters a commi
 
 **Actors**: `cpt-insightspec-actor-gh-platform-engineer`
 
+#### Configurable History Depth Limit
+
+- [ ] `p2` - **ID**: `cpt-insightspec-fr-gh-history-depth`
+
+The connector MUST support a configurable `history_since_date` parameter that limits commit collection to commits authored on or after a specified date. When set, the first full collection run MUST NOT fetch commits older than this date. Subsequent incremental runs are unaffected and continue from the stored cursor.
+
+**Rationale**: Large repositories with years of history can result in initial collection runs that exceed acceptable time budgets. A configurable date cutoff provides a practical onboarding escape hatch and keeps initial runs predictable.
+
+**Actors**: `cpt-insightspec-actor-gh-platform-engineer`
+
 #### Record Collection Run Metadata
 
 - [ ] `p2` - **ID**: `cpt-insightspec-fr-gh-collection-runs`
@@ -435,7 +458,7 @@ The connector SHOULD support optional caching of GraphQL API responses to reduce
 
 - [ ] `p1` - **ID**: `cpt-insightspec-nfr-gh-auth`
 
-The connector MUST support Personal Access Token (PAT) and GitHub App installation token authentication methods, configurable without code changes.
+The connector MUST support Personal Access Token (PAT), GitHub App installation token, and OAuth app token authentication methods, configurable without code changes. OAuth app tokens are functionally equivalent to PATs for read-only API access and MUST be accepted wherever PATs are accepted.
 
 #### Rate Limit Compliance
 
@@ -468,6 +491,12 @@ Repeated collection of the same data MUST NOT create duplicate rows. The connect
 - **Real-time latency SLA**: Not applicable — the connector operates in scheduled batch pull mode only.
 - **GPU / high-compute NFRs**: Not applicable — the connector performs I/O-bound API collection with no computational requirements.
 - **Enrichment pipeline execution SLA**: Not applicable — enrichment pipelines (AI detection, license scanning) have their own operational requirements independent of this connector.
+- **Safety (SAFE)**: Not applicable — this connector is a data collection pipeline with no physical or safety-critical interactions.
+- **Usability / UX**: Not applicable — the connector exposes a CLI and programmatic interface for platform engineers; end-user accessibility standards do not apply.
+- **Availability / Reliability SLA (REL)**: Not applicable — the connector is a scheduled batch job; availability SLAs apply to the scheduling infrastructure, not to the connector itself.
+- **Regulatory compliance (COMPL)**: Not applicable — the connector collects code metadata (commit messages, file names, line counts) from internal GitHub organizations; no PII, healthcare, or financial data is in scope.
+- **Maintainability documentation (MAINT)**: Not applicable — API and admin documentation requirements are owned by the platform-level PRD.
+- **Operations (OPS)**: Not applicable — deployment and monitoring requirements are owned by the platform infrastructure team.
 
 ---
 
@@ -660,6 +689,9 @@ GitHub users can configure privacy settings that replace their real email with a
 
 **Consideration**: Extracting the numeric ID from the no-reply address would improve resolution rates without requiring Identity Manager changes.
 
+**Owner**: Platform / Data Engineering team lead
+**Target resolution**: Before DESIGN.md review sign-off
+
 ---
 
 ### OQ-GH-2: GraphQL cache retention policy
@@ -676,6 +708,9 @@ The optional `github_graphql_cache` Bronze table can grow unbounded without a re
 
 **Current approach**: TTL configurable per data category; no automatic purge implemented.
 
+**Owner**: Platform / Data Engineering team lead
+**Target resolution**: Before production deployment of the connector
+
 ---
 
 ### OQ-GH-3: Review state mapping
@@ -687,3 +722,8 @@ GitHub distinguishes four formal review states (`APPROVED`, `CHANGES_REQUESTED`,
 **Current approach**: Store all four states; analytics can filter by state as needed.
 
 **Consideration**: `COMMENTED` reviews inflate reviewer participation counts; some analytics want "approver" counts only.
+
+**Consideration**: GitHub's GraphQL API may return a `PENDING` state for a review that has been submitted as a draft but not yet formally submitted. The expected handling of `PENDING` reviews (store, skip, or flag) requires an explicit decision before implementation.
+
+**Owner**: Platform / Data Engineering team lead
+**Target resolution**: Before DESIGN.md review sign-off
